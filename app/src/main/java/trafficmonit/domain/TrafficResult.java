@@ -24,5 +24,5 @@ public class TrafficResult {
 
     //least busy 90min period
     @Getter@Setter
-    LocalDateTime leastBusyPeriodStartAt;
+    LeastBusyPeriodBuffer leastBusyPeriodBuffer;
 }

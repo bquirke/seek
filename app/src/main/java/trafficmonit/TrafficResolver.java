@@ -1,19 +1,31 @@
 package trafficmonit;
 
+import trafficmonit.domain.LeastBusyPeriodBuffer;
 import trafficmonit.domain.TrafficResult;
 import trafficmonit.service.TrafficService;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class TrafficResolver {
 
-    TrafficService trafficService = new TrafficService();
+    TrafficService trafficService;
+
+
+    public TrafficResolver(){
+        TrafficResult result = TrafficResult.builder()
+                .totalNumberOfCars(0L)
+                .carsPerDay(new LinkedHashMap<LocalDate, Long>())
+                .intervals(new LinkedHashMap<LocalDateTime, Long>())
+                .leastBusyPeriodBuffer(new LeastBusyPeriodBuffer())
+                .build();
+
+        this.trafficService = new TrafficService(result);
+    }
 
     public void resolve() throws IOException {
 
@@ -21,19 +33,22 @@ public class TrafficResolver {
         String file = "traffic.txt";
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         // assuming utf-8
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(classloader.getResourceAsStream(file), "UTF-8"));
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(classloader.getResourceAsStream(file), StandardCharsets.UTF_8));
 
         String curLine;
         while ((curLine = bufferedReader.readLine()) != null){
             //process the line as required
             trafficService.processLine(curLine);
-
         }
         // close io
         bufferedReader.close();
 
         // output the results
 
+        writeResultsToStdOut();
+    }
+
+    private void writeResultsToStdOut() {
         // total number of cars
         System.out.printf("Total number of cars is: %s%n", trafficService.getTotalNumberOfCars());
 
@@ -50,6 +65,12 @@ public class TrafficResolver {
         }
 
         // Least busy 90min period
-        System.out.printf("Least busy interval ends at %s %n", trafficService.getLeastBusy90MinInterval());
+        System.out.println("\n\nLeast busy 90 min period is:");
+        LeastBusyPeriodBuffer leastBusyPeriod = trafficService.getLeastBusyPeriod();
+        for(LocalDateTime interval: leastBusyPeriod.getIntervalListForPeriod()){
+            System.out.printf("%s%n", interval);
+        }
+
+        System.out.printf("With a total number of %s cars ", leastBusyPeriod.getTotalNumberOfCarsInPeriod());
     }
 }

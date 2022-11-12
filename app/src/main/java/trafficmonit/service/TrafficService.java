@@ -1,101 +1,108 @@
 package trafficmonit.service;
 
 import lombok.Getter;
+import trafficmonit.domain.LeastBusyPeriodBuffer;
 import trafficmonit.domain.TrafficResult;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class TrafficService {
 
-    @Getter
     private final TrafficResult result;
 
     private int currentLowest90MinPeriodTotal = 0;
 
-    public TrafficService(){
-        this.result = TrafficResult.builder()
-                .totalNumberOfCars(0L)
-                .carsPerDay(new LinkedHashMap<LocalDate, Long>())
-                .intervals(new LinkedHashMap<LocalDateTime, Long>())
-                .build();
+    public TrafficService(TrafficResult result){
+        this.result = result;
     }
 
     public void processLine(String intervalOfTraffic){
+        // parse the line as needed
         String[] line = intervalOfTraffic.split(" ");
-
         LocalDateTime date = parseDate(line);
         Long numCars = parseNumOfCars(line);
 
+        // increment total cars seen for part 1 of challenge
         incrementTotalNumberOfCars(numCars);
 
+        // update days seen in the file and car totals per day.... part 2
         addDailyIntervalIncrement(date, numCars);
 
         // add interval
         this.result.getIntervals().put(date, numCars);
 
-        // eval least busy period
+        // eval the least busy 90min period .... part 4
         updateLeastBusy90MinInterval(date);
     }
 
-    // this will be a look-back function that keeps track of the interval that ends the quietest 90min period
-    private void updateLeastBusy90MinInterval(LocalDateTime date) {
-        // we have processed 3 intervals
+    // this is a look-back function that keeps track a custom buffer object of the current quietest period
+    protected void updateLeastBusy90MinInterval(LocalDateTime thirdInterval) {
+        // we have processed at least 3 intervals
         if(this.result.getIntervals().size() > 2){
             // get the list of keys
             List<LocalDateTime> dates = new LinkedList<>(this.result.getIntervals().keySet());
-            int indexOfLastInterval = dates.indexOf(date);
 
-            int totalNumCarsInLast90Mins = 0;
+            // find indices we need to check
+            int indexOfLastInterval = dates.indexOf(thirdInterval);
 
-            // with the index of our current date, do a lookback calculation of the last 3 intervals
-            for(int i = indexOfLastInterval; i > indexOfLastInterval - 3; i--){
-                LocalDateTime intervalToFetch = dates.get(i);
-                Long numberOfCars = this.result.getIntervals().get(intervalToFetch);
+            LocalDateTime firstInterval = dates.get(indexOfLastInterval - 2);
+            LocalDateTime secondInterval = dates.get(indexOfLastInterval - 1);
 
-                totalNumCarsInLast90Mins += numberOfCars;
+            // evaluate time between them
+            // its set to 60 as the timestamps are for the BEGINNING of the half hour.
+            // that means we are evaluating 5:00 - 6:00 timestamps, but this is actually 90mins of cars
+            //TODO add to documentation
+            if((ChronoUnit.MINUTES.between(firstInterval, thirdInterval) == 60 )){
+
+                long totalNumCarsInLast90Mins = this.result.getIntervals().get(firstInterval)
+                        + this.result.getIntervals().get(secondInterval)
+                        + this.result.getIntervals().get(thirdInterval);
+
+                // evaluate if this period was the least busy
+                if((totalNumCarsInLast90Mins < this.result.getLeastBusyPeriodBuffer().getTotalNumberOfCarsInPeriod())
+                        || (this.result.getLeastBusyPeriodBuffer().getTotalNumberOfCarsInPeriod() == 0)){
+                    updateTheLeastBusyPeriodBuffer(dates, indexOfLastInterval, totalNumCarsInLast90Mins);
+                }
             }
-
-            // evaluate if this period was the least busy
-            if((totalNumCarsInLast90Mins < currentLowest90MinPeriodTotal) || (currentLowest90MinPeriodTotal == 0)){
-                currentLowest90MinPeriodTotal = totalNumCarsInLast90Mins;
-
-                this.result.setLeastBusyPeriodStartAt(date);
-            }
-
         }
     }
 
-    private void addDailyIntervalIncrement(LocalDateTime date, Long numCarsForDate) {
+    private void updateTheLeastBusyPeriodBuffer(List<LocalDateTime> dates, int indexOfLastInterval, long totalNumCarsInLast90Mins) {
+        this.result.getLeastBusyPeriodBuffer().setTotalNumberOfCarsInPeriod(totalNumCarsInLast90Mins);
+
+        // clear the last period added
+        this.result.getLeastBusyPeriodBuffer().clearBuffer();
+
+        // Add intervals in order
+        this.result.getLeastBusyPeriodBuffer().addToBuffer(dates.get(indexOfLastInterval - 2));
+        this.result.getLeastBusyPeriodBuffer().addToBuffer(dates.get(indexOfLastInterval - 1));
+        this.result.getLeastBusyPeriodBuffer().addToBuffer(dates.get(indexOfLastInterval));
+    }
+
+    protected void addDailyIntervalIncrement(LocalDateTime date, Long numCarsForDate) {
         LocalDate day = date.toLocalDate();
         // check if the day has already been added
-        if(getResult().getCarsPerDay().containsKey(day)){
-            Long currentDaysTotal = getResult().getCarsPerDay().get(day);
-            //TODO remove this access pattern... doesnt feel right... just use this.result
-            getResult().getCarsPerDay().put(day, currentDaysTotal + numCarsForDate);
+        if(this.result.getCarsPerDay().containsKey(day)){
+            Long currentDaysTotal = this.result.getCarsPerDay().get(day);
+
+            this.result.getCarsPerDay().put(day, currentDaysTotal + numCarsForDate);
         }
         else{
-            getResult().getCarsPerDay().put(day, numCarsForDate);
+            this.result.getCarsPerDay().put(day, numCarsForDate);
         }
     }
 
-    private void incrementTotalNumberOfCars(Long currentIntervalNumCars) {
+    protected void incrementTotalNumberOfCars(Long currentIntervalNumCars) {
         //increment the count
-        Long currentTotal = getResult().getTotalNumberOfCars();
-        getResult().setTotalNumberOfCars(currentTotal == null ? 0 : currentTotal + currentIntervalNumCars);
+        Long currentTotal = this.result.getTotalNumberOfCars();
+        this.result.setTotalNumberOfCars(currentTotal == null ? 0 : currentTotal + currentIntervalNumCars);
     }
 
-    public Long getTotalNumberOfCars(){
-        return getResult().getTotalNumberOfCars();
-    }
-
-    public LinkedHashMap<LocalDate, Long> getCarsPerDay(){
-        return getResult().getCarsPerDay();
-    }
-
-    public Map<LocalDateTime, Long> getTopThreeIntervals(){
+    public LinkedHashMap<LocalDateTime, Long> getTopThreeIntervals(){
         LinkedHashMap<LocalDateTime, Long> sorted = new LinkedHashMap<>();
         this.result.getIntervals().entrySet().stream()
                 .sorted(Map.Entry.<LocalDateTime, Long>comparingByValue().reversed())
@@ -104,10 +111,17 @@ public class TrafficService {
         return sorted;
     }
 
-    public LocalDateTime getLeastBusy90MinInterval(){
-        return this.result.getLeastBusyPeriodStartAt();
+    public Long getTotalNumberOfCars(){
+        return this.result.getTotalNumberOfCars();
     }
 
+    public LinkedHashMap<LocalDate, Long> getCarsPerDay(){
+        return this.result.getCarsPerDay();
+    }
+
+    public LeastBusyPeriodBuffer getLeastBusyPeriod(){
+        return this.result.getLeastBusyPeriodBuffer();
+    }
 
     /*
     *
