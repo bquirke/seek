@@ -35,7 +35,7 @@ chmod +x gradlew
 ### Self Criticism
 - More testing
   - More testing can always be done!
-  - Specifically I could have included and integration test. This would have insured the reading of the file was accurate.
+  - Specifically I could have included an integration test. This would have insured the reading/parsing of the file was accurate. Given the scope of the app and time I thought my time was best used elsewhere to show less obvious skills 
 - Could maybe have added deserialization to go straight into interval objects instead of creating them myself
   - Felt it wasn't necessary given scope and time
 - Part 3 of the problem was solved in trafficmonit.service.TrafficService.updateLeastBusy90MinInterval
