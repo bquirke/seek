@@ -55,7 +55,6 @@ public class TrafficService {
             // evaluate time between them
             // its set to 60 as the timestamps are for the BEGINNING of the half hour.
             // that means we are evaluating 5:00 - 6:00 timestamps, but this is actually 90mins of cars
-            //TODO add to documentation
             if((ChronoUnit.MINUTES.between(firstInterval, thirdInterval) == 60 )){
 
                 long totalNumCarsInLast90Mins = this.result.getIntervals().get(firstInterval)
