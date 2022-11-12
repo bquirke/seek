@@ -18,6 +18,8 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.4'
 }
 
+apply plugin : "java"
+
 application {
     // Define the main class for the application.
     mainClass = 'trafficmonit.App'

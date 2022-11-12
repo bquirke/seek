@@ -13,6 +13,25 @@ on the traffic monitoring app.
   - This is based off "You can assume clean input, as these files are machine-generated." from the problem PDF
 - The file is always in order and sorted
 
+### Prerequisites
+You will need to have a Java 8 JDK installed
+
+### To run
+To install just check out the repo and run the below from the /app folder
+```bash
+./gradlew clean run
+```
+You may need to run
+```bash
+chmod +x gradlew
+```
+- traffic.txt must be under the resources folder. One has been provided.
+
+### Running tests
+```bash
+./gradlew clean test 
+```
+
 ### Self Criticism
 - More testing
   - More testing can always be done!
