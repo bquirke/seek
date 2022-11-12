@@ -17,7 +17,7 @@ on the traffic monitoring app.
 You will need to have a Java 8 JDK installed
 
 ### To run
-To install just check out the repo and run the below from the /app folder
+To install just check out the repo and run the below
 ```bash
 ./gradlew clean run
 ```
